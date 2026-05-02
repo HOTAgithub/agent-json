@@ -46,8 +46,6 @@ export default {
     }
 
     if (url.pathname === '/stats') {
-      const cached = await env.AGENT_ROUTER_KV.get('stats', 'json');
-      if (cached) return jsonResponse(cached);
       return jsonResponse({ total_agents: 0, registries: 5, last_updated: null, note: 'Stats being populated' });
     }
 
@@ -124,8 +122,8 @@ export default {
         registries_searched: results.filter(r => r.status === 'fulfilled').length,
       };
 
-      // Cache for 1 hour
-      await env.AGENT_ROUTER_KV.put(cacheKey, JSON.stringify(response), { expirationTtl: 3600 });
+      // Cache for 1 hour (KV disabled - will add later)
+      // await env.AGENT_ROUTER_KV.put(cacheKey, JSON.stringify(response), { expirationTtl: 3600 });
 
       return jsonResponse(response);
     }
@@ -138,10 +136,13 @@ export default {
 
 async function searchMCPRegistry(query, limit) {
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
     const res = await fetch(`https://registry.modelcontextprotocol.io/v0/servers?search=${encodeURIComponent(query)}&limit=${limit}`, {
-      headers: { 'Accept': 'application/json' },
-      signal: AbortSignal.timeout(5000),
+      headers: { 'Accept': 'application/json', 'User-Agent': 'AgentRouter/0.1' },
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
     if (!res.ok) return [];
     const data = await res.json();
     return data.servers || data || [];
@@ -152,10 +153,13 @@ async function searchMCPRegistry(query, limit) {
 
 async function searchSmithery(query, limit) {
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
     const res = await fetch(`https://api.smithery.ai/servers?q=${encodeURIComponent(query)}&pageSize=${limit}`, {
-      headers: { 'Accept': 'application/json' },
-      signal: AbortSignal.timeout(5000),
+      headers: { 'Accept': 'application/json', 'User-Agent': 'AgentRouter/0.1' },
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
     if (!res.ok) return [];
     const data = await res.json();
     return data.servers || [];
@@ -166,10 +170,13 @@ async function searchSmithery(query, limit) {
 
 async function searchGlama(query, limit) {
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
     const res = await fetch(`https://glama.ai/api/mcp/v1/servers?search=${encodeURIComponent(query)}&limit=${limit}`, {
-      headers: { 'Accept': 'application/json' },
-      signal: AbortSignal.timeout(5000),
+      headers: { 'Accept': 'application/json', 'User-Agent': 'AgentRouter/0.1' },
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
     if (!res.ok) return [];
     const data = await res.json();
     return Array.isArray(data) ? data : (data.servers || []);
