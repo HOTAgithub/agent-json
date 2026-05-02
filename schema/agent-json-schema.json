@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agent-json.dev/schema/v0.1",
+  "title": "Agent Manifest",
+  "description": "Universal AI agent description format",
+  "type": "object",
+  "required": ["name", "description"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Unique agent identifier (kebab-case)",
+      "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "description": {
+      "type": "string",
+      "description": "What this agent does",
+      "minLength": 1,
+      "maxLength": 2048
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+"
+    },
+    "url": { "type": "string", "format": "uri" },
+    "provider": {
+      "type": "object",
+      "properties": {
+        "organization": { "type": "string" },
+        "url": { "type": "string", "format": "uri" },
+        "contact": { "type": "string", "format": "email" }
+      }
+    },
+    "protocols": {
+      "type": "array",
+      "items": { "type": "string", "enum": ["mcp", "a2a", "http-rest", "grpc", "websocket", "stdio"] },
+      "uniqueItems": true
+    },
+    "capabilities": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true
+    },
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "description"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "tags": { "type": "array", "items": { "type": "string" } },
+          "examples": { "type": "array", "items": { "type": "string" } },
+          "inputModes": { "type": "array", "items": { "type": "string" } },
+          "outputModes": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "tools": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "description"],
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "url": { "type": "string", "format": "uri" },
+          "free": { "type": "boolean", "default": true }
+        }
+      }
+    },
+    "endpoints": {
+      "type": "object",
+      "properties": {
+        "api": { "type": "string", "format": "uri" },
+        "docs": { "type": "string", "format": "uri" },
+        "health": { "type": "string", "format": "uri" },
+        "mcp": { "type": "string", "format": "uri" },
+        "a2a": { "type": "string", "format": "uri" }
+      }
+    },
+    "transport": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["stdio", "sse", "streamable-http", "grpc", "websocket"] },
+        "port": { "type": "integer" },
+        "path": { "type": "string" }
+      }
+    },
+    "authentication": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["none", "bearer", "api-key", "oauth2", "mtls", "custom"] },
+        "schemes": { "type": "array", "items": { "type": "string" } },
+        "instructions": { "type": "string" }
+      }
+    },
+    "packages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "registryType": { "type": "string", "enum": ["npm", "pypi", "oci", "docker", "github"] },
+          "registryBaseUrl": { "type": "string", "format": "uri" },
+          "identifier": { "type": "string" },
+          "version": { "type": "string" }
+        }
+      }
+    },
+    "trust": {
+      "type": "object",
+      "properties": {
+        "verified": { "type": "boolean", "default": false },
+        "score": { "type": "number", "minimum": 0, "maximum": 1 },
+        "endorsements": { "type": "integer" },
+        "uptime": { "type": "string" },
+        "source": { "type": "string" }
+      }
+    },
+    "tests": {
+      "type": "object",
+      "properties": {
+        "status": { "type": "string", "enum": ["passed", "partial", "failed", "untested"], "default": "untested" },
+        "pass_rate": { "type": "number", "minimum": 0, "maximum": 1 },
+        "latency_ms": { "type": "number" },
+        "tested_at": { "type": "string", "format": "date-time" },
+        "report_url": { "type": "string", "format": "uri" }
+      }
+    },
+    "repository": {
+      "type": "object",
+      "properties": {
+        "url": { "type": "string", "format": "uri" },
+        "source": { "type": "string", "enum": ["github", "gitlab", "bitbucket", "other"] }
+      }
+    },
+    "license": { "type": "string" },
+    "metadata": { "type": "object", "additionalProperties": true }
+  }
+}

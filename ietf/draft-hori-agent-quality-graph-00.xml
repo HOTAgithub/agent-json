@@ -1,0 +1,409 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rfc xmlns="http://tools.ietf.org/xml/rfcformat"
+     docName="draft-hori-agent-quality-graph-00"
+     ipr="trust200902"
+     category="info"
+     xml:lang="en">
+  <front>
+    <title>Agent Quality Graph (AQG): A Protocol for Evaluating AI Agent Trustworthiness via Delegation Graphs</title>
+    <author fullname="Takayuki Hori" initials="T." surname="Hori">
+      <address>
+        <email>0xoyabun@gmail.com</email>
+        <country>JP</country>
+      </address>
+    </author>
+    <date year="2026" month="May"/>
+    <abstract>
+      <t>
+        This document describes the Agent Quality Graph (AQG) protocol, a method
+        for evaluating and ranking AI agent trustworthiness based on delegation
+        transaction graphs. As the number of autonomous AI agents grows rapidly,
+        there is no standardized mechanism for determining which agents reliably
+        complete delegated tasks. AQG applies graph-based ranking algorithms,
+        analogous to web page ranking via hyperlink analysis, to the domain of
+        agent-to-agent delegation. Agents that are frequently delegated to by
+        other highly-ranked agents receive higher trust scores. This document
+        defines the delegation record format, the graph construction process,
+        the scoring algorithm, and the API for querying trust scores.
+      </t>
+    </abstract>
+  </front>
+
+  <middle>
+    <section title="Introduction">
+      <t>
+        As of 2026, over 100,000 AI agents are deployed across more than 15
+        registries and marketplaces. Protocols such as MCP (Model Context
+        Protocol) and A2A (Agent-to-Agent) enable agents to communicate and
+        delegate tasks. However, no standard mechanism exists for evaluating
+        whether an agent will reliably complete a delegated task.
+      </t>
+      <t>
+        Current approaches to agent discovery rely on self-reported capabilities,
+        download counts, or manual reviews. These signals are easily manipulated
+        and do not reflect actual task completion quality.
+      </t>
+      <t>
+        AQG addresses this gap by building a directed graph of delegation
+        transactions between agents. Each delegation creates a weighted edge from
+        the delegating agent to the delegated agent. A graph-based ranking
+        algorithm then computes trust scores that reflect the accumulated evidence
+        of successful task completion.
+      </t>
+
+      <section title="Motivation">
+        <t>
+          The design of AQG is inspired by the success of link-based ranking in
+          web search (PageRank). In the web graph, a link from page A to page B
+          is treated as a "vote" for page B's relevance. Similarly, in AQG, a
+          delegation from agent A to agent B is treated as evidence of agent B's
+          capability.
+        </t>
+        <t>
+          Key differences from web link analysis:
+          <list style="symbols">
+            <t>Delegation edges carry outcome metadata (success, failure, quality score)</t>
+            <t>Edges have recency weights (recent delegations matter more)</t>
+            <t>The graph is partitioned by task category</t>
+            <t>Anti-gaming mechanisms prevent Sybil attacks and score manipulation</t>
+          </list>
+        </t>
+      </section>
+
+      <section title="Terminology">
+        <t>
+          <dl>
+            <dt>Agent</dt>
+            <dd>An autonomous software entity capable of receiving and completing tasks</dd>
+            <dt>Delegation</dt>
+            <dd>A transaction where one agent (delegator) assigns a task to another agent (delegatee)</dd>
+            <dt>Delegation Record</dt>
+            <dd>A signed, immutable record of a delegation transaction including outcome</dd>
+            <dt>Trust Score</dt>
+            <dd>A value between 0.0 and 1.0 representing an agent's accumulated reliability</dd>
+            <dt>AQG Node</dt>
+            <dd>A vertex in the quality graph representing an agent</dd>
+            <dt>AQG Edge</dt>
+            <dd>A directed, weighted edge representing accumulated delegation evidence between two agents</dd>
+            <dt>Trust Provider</dt>
+            <dd>An entity that computes and publishes trust scores from delegation data</dd>
+          </dl>
+        </t>
+      </section>
+    </section>
+
+    <section title="Delegation Record Format">
+      <t>
+        Each delegation transaction produces a Delegation Record. The record is a
+        JSON object with the following fields:
+      </t>
+
+      <figure>
+        <artwork type="json"><![CDATA[{
+  "record_id": "uuid-v4",
+  "delegator": "agent:travel-planner@example.com",
+  "delegatee": "agent:hotel-booker@example.com",
+  "task_category": "booking",
+  "task_description": "Book hotel room for 2 nights",
+  "timestamp": "2026-05-03T12:00:00Z",
+  "outcome": {
+    "status": "success|failure|partial|timeout",
+    "quality_score": 0.95,
+    "latency_ms": 450,
+    "verifier": "agent:travel-planner@example.com",
+    "verified_at": "2026-05-03T12:00:01Z"
+  },
+  "context_hash": "sha256:abcdef...",
+  "signature": {
+    "algorithm": "Ed25519",
+    "value": "base64-encoded-signature",
+    "public_key": "base64-encoded-public-key"
+  }
+}]]></artwork>
+      </figure>
+
+      <section title="Required Fields">
+        <t>
+          <list style="symbols">
+            <t>record_id: Unique identifier (UUID v4)</t>
+            <t>delegator: Agent identifier of the task delegator</t>
+            <t>delegatee: Agent identifier of the task executor</t>
+            <t>timestamp: ISO 8601 datetime of delegation</t>
+            <t>outcome: Result of the delegation (status required, others optional)</t>
+          </list>
+        </t>
+      </section>
+
+      <section title="Outcome Status Values">
+        <t>
+          <dl>
+            <dt>success</dt>
+            <dd>Task completed satisfactorily</dd>
+            <dt>failure</dt>
+            <dd>Task could not be completed</dd>
+            <dt>partial</dt>
+            <dd>Task partially completed</dd>
+            <dt>timeout</dt>
+            <dd>Task did not complete within expected time</dd>
+          </dl>
+        </t>
+      </section>
+
+      <section title="Signature">
+        <t>
+          Delegation records SHOULD be signed by the delegator using Ed25519 or
+          ECDSA-P256. The signature covers the canonical JSON of all fields
+          except the signature object itself. This prevents tampering and enables
+          verification of record authenticity.
+        </t>
+      </section>
+    </section>
+
+    <section title="Graph Construction">
+      <section title="Node Creation">
+        <t>
+          Each unique agent identifier becomes a node in the quality graph.
+          Nodes are created on first appearance in any delegation record.
+        </t>
+      </section>
+
+      <section title="Edge Aggregation">
+        <t>
+          For each (delegator, delegatee) pair, a single directed edge is
+          maintained. The edge weight is computed from all delegation records
+          between the pair:
+        </t>
+        <t>
+          Edge weight = sum(outcome_weight * recency_weight) for each record
+        </t>
+        <t>
+          Where:
+          <list style="symbols">
+            <t>outcome_weight: success=1.0, partial=0.5, timeout=-0.2, failure=-0.5</t>
+            <t>recency_weight: exponential decay with half-life of 90 days</t>
+          </list>
+        </t>
+      </section>
+
+      <section title="Category Partitioning">
+        <t>
+          The graph is partitioned by task_category. An agent may have different
+          trust scores in different categories. The global trust score is the
+          weighted average across all categories.
+        </t>
+      </section>
+    </section>
+
+    <section title="Scoring Algorithm">
+      <section title="Base Score Computation">
+        <t>
+          The base trust score for each agent is computed using a modified
+          PageRank algorithm applied to the AQG graph:
+        </t>
+        <t>
+          Score(agent_i) = (1 - d) / N + d * sum(Score(agent_j) * w(j->i) / out_degree(j))
+          for all agents j that delegate to agent_i
+        </t>
+        <t>
+          Where:
+          <list style="symbols">
+            <t>d = damping factor (0.85)</t>
+            <t>N = total number of agents</t>
+            <t>w(j->i) = normalized edge weight from j to i</t>
+          </list>
+        </t>
+      </section>
+
+      <section title="Score Normalization">
+        <t>
+          Raw scores are normalized to the range [0.0, 1.0] using min-max
+          normalization across all agents. A minimum of 10 delegation records
+          are required before a score is published (cold-start threshold).
+        </t>
+      </section>
+
+      <section title="Anti-Gaming Mechanisms">
+        <t>
+          <list style="symbols">
+            <t>Sybil Resistance: Newly created agents have no score until they
+            receive delegations from established agents (bootstrap problem).</t>
+            <t>Collusion Detection: If a cluster of agents only delegate among
+            themselves with uniformly positive outcomes, their mutual edge
+            weights are discounted.</t>
+            <t>Temporal Decay: Scores naturally decay without ongoing positive
+            delegations, preventing legacy agents from maintaining high scores
+            indefinitely.</t>
+            <t>Verification Requirement: Outcomes signed by both delegator and
+            delegatee carry higher weight than single-signed outcomes.</t>
+          </list>
+        </t>
+      </section>
+    </section>
+
+    <section title="API Specification">
+      <section title="Submit Delegation Record">
+        <t>
+          POST /aqg/v1/records
+        </t>
+        <t>
+          Accepts a signed delegation record. Validates signature, indexes the
+          record, and triggers asynchronous score recomputation.
+        </t>
+      </section>
+
+      <section title="Query Trust Score">
+        <t>
+          GET /aqg/v1/scores/{agent_id}
+        </t>
+        <t>
+          Returns the current trust score for an agent:
+        </t>
+        <figure>
+          <artwork type="json"><![CDATA[{
+  "agent_id": "agent:hotel-booker@example.com",
+  "global_score": 0.87,
+  "categories": {
+    "booking": { "score": 0.92, "records": 156 },
+    "scheduling": { "score": 0.78, "records": 23 }
+  },
+  "computed_at": "2026-05-03T12:00:00Z",
+  "provider": "aqg.example.com",
+  "signature": { "algorithm": "Ed25519", "value": "..." }
+}]]></artwork>
+        </figure>
+      </section>
+
+      <section title="Query Delegation Graph">
+        <t>
+          GET /aqg/v1/graph/{agent_id}?depth=2
+        </t>
+        <t>
+          Returns the subgraph of delegation relationships for the specified
+          agent, up to the requested depth.
+        </t>
+      </section>
+    </section>
+
+    <section title="Integration with Existing Protocols">
+      <section title="A2A Integration">
+        <t>
+          AQG trust scores can be included in A2A Agent Cards as an extension:
+        </t>
+        <figure>
+          <artwork type="json"><![CDATA[{
+  "name": "Hotel Booker",
+  "...": "...(standard A2A Agent Card fields)...",
+  "extensions": {
+    "aqg": {
+      "trust_score": 0.87,
+      "score_provider": "https://aqg.example.com",
+      "score_url": "https://aqg.example.com/aqg/v1/scores/agent:hotel-booker@example.com"
+    }
+  }
+}]]></artwork>
+        </figure>
+      </section>
+
+      <section title="MCP Integration">
+        <t>
+          MCP servers can expose their AQG trust score via the agent.json
+          well-known URI:
+        </t>
+        <figure>
+          <artwork type="json"><![CDATA[{
+  "name": "hotel-booker",
+  "description": "Books hotel rooms",
+  "trust": {
+    "verified": true,
+    "score": 0.87,
+    "source": "aqg.example.com"
+  }
+}]]></artwork>
+        </figure>
+      </section>
+    </section>
+
+    <section title="Security Considerations">
+      <t>
+        <list style="symbols">
+          <t>Delegation records MUST be transmitted over TLS 1.2 or higher</t>
+          <t>Record signatures prevent tampering with delegation history</t>
+          <t>Trust score responses from providers SHOULD be signed to prevent spoofing</t>
+          <t>The Sybil resistance mechanism prevents creation of fake agents to inflate scores</t>
+          <t>The collusion detection mechanism prevents ring-boosting of scores</t>
+          <t>Privacy: Delegation records contain only agent identifiers, not user data</t>
+          <t>Score manipulation: The recency decay ensures that historical manipulation
+          becomes less effective over time</t>
+        </list>
+      </t>
+    </section>
+
+    <section title="IANA Considerations">
+      <t>
+        This document requests registration of the Well-Known URI "aqg" in the
+        IANA Well-Known URIs registry for discovering AQG endpoints.
+      </t>
+      <t>
+        URI suffix: aqg
+        Change controller: IETF
+        Specification document: this document
+        Related information: Agent Quality Graph endpoint discovery
+      </t>
+    </section>
+
+    <section title="References">
+      <section title="Normative References">
+        <reference anchor="RFC8615">
+          <front>
+            <title>Well-Known Uniform Resource Identifiers (URIs)</title>
+            <author fullname="M. Nottingham" initials="M." surname="Nottingham"/>
+            <date year="2019" month="May"/>
+          </front>
+        </reference>
+        <reference anchor="A2A">
+          <front>
+            <title>Agent-to-Agent Protocol</title>
+            <author fullname="Google LLC"/>
+            <date year="2025"/>
+          </front>
+        </reference>
+        <reference anchor="MCP">
+          <front>
+            <title>Model Context Protocol</title>
+            <author fullname="Anthropic"/>
+            <date year="2024" month="November"/>
+          </front>
+        </reference>
+      </section>
+
+      <section title="Informative References">
+        <reference anchor="PAGERANK">
+          <front>
+            <title>The PageRank Citation Ranking: Bringing Order to the Web</title>
+            <author fullname="L. Page" initials="L." surname="Page"/>
+            <author fullname="S. Brin" initials="S." surname="Brin"/>
+            <author fullname="R. Motwani" initials="R." surname="Motwani"/>
+            <author fullname="T. Winograd" initials="T." surname="Winograd"/>
+            <date year="1999"/>
+          </front>
+        </reference>
+        <reference anchor="ARDP">
+          <front>
+            <title>Agent Registration and Discovery Protocol (ARDP)</title>
+            <author fullname="R. Pioli" initials="R." surname="Pioli"/>
+            <date year="2026" month="February"/>
+          </front>
+        </reference>
+      </section>
+    </section>
+  </middle>
+
+  <back>
+    <section title="Acknowledgements">
+      <t>
+        The design of AQG is inspired by the PageRank algorithm (Page et al., 1999)
+        and the Agent Registration and Discovery Protocol (Pioli, 2026).
+      </t>
+    </section>
+  </back>
+</rfc>
