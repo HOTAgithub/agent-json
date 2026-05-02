@@ -1,0 +1,10 @@
+{
+  "name": "agent-router",
+  "version": "0.1.0",
+  "description": "Unified search API across AI agent registries",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "npx wrangler dev",
+    "deploy": "npx wrangler deploy --keep-vars"
+  }
+}
