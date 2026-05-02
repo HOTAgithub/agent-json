@@ -120,7 +120,7 @@ agent-json/
 ## Related Projects
 
 - **Agent Router** — Unified search API across all agent registries (coming soon)
-- **Agent Quality Graph (AQG)** — Trust scoring via delegation graphs ([IETF Draft](./ietf/draft-hori-agent-quality-graph-00.xml))
+- **Agent Quality Graph (AQG)** — Trust scoring via delegation graphs ([IETF Draft](https://datatracker.ietf.org/doc/draft-hori-agent-quality-graph/))
 - **Agent Test Runner** — Automated quality verification for agents (coming soon)
 
 ## Contributing

@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<rfc xmlns="http://tools.ietf.org/xml/rfcformat"
-     docName="draft-hori-agent-quality-graph-00"
+<rfc docName="draft-hori-agent-quality-graph-00"
      ipr="trust200902"
      category="info"
      xml:lang="en">
@@ -8,8 +7,10 @@
     <title>Agent Quality Graph (AQG): A Protocol for Evaluating AI Agent Trustworthiness via Delegation Graphs</title>
     <author fullname="Takayuki Hori" initials="T." surname="Hori">
       <address>
-        <email>0xoyabun@gmail.com</email>
-        <country>JP</country>
+        <postal>
+          <country>JP</country>
+        </postal>
+        <email>hohohoriririhoribanzai@gmail.com</email>
       </address>
     </author>
     <date year="2026" month="May"/>
@@ -351,54 +352,54 @@
       </t>
     </section>
 
-    <section title="References">
-      <section title="Normative References">
-        <reference anchor="RFC8615">
-          <front>
-            <title>Well-Known Uniform Resource Identifiers (URIs)</title>
-            <author fullname="M. Nottingham" initials="M." surname="Nottingham"/>
-            <date year="2019" month="May"/>
-          </front>
-        </reference>
-        <reference anchor="A2A">
-          <front>
-            <title>Agent-to-Agent Protocol</title>
-            <author fullname="Google LLC"/>
-            <date year="2025"/>
-          </front>
-        </reference>
-        <reference anchor="MCP">
-          <front>
-            <title>Model Context Protocol</title>
-            <author fullname="Anthropic"/>
-            <date year="2024" month="November"/>
-          </front>
-        </reference>
-      </section>
-
-      <section title="Informative References">
-        <reference anchor="PAGERANK">
-          <front>
-            <title>The PageRank Citation Ranking: Bringing Order to the Web</title>
-            <author fullname="L. Page" initials="L." surname="Page"/>
-            <author fullname="S. Brin" initials="S." surname="Brin"/>
-            <author fullname="R. Motwani" initials="R." surname="Motwani"/>
-            <author fullname="T. Winograd" initials="T." surname="Winograd"/>
-            <date year="1999"/>
-          </front>
-        </reference>
-        <reference anchor="ARDP">
-          <front>
-            <title>Agent Registration and Discovery Protocol (ARDP)</title>
-            <author fullname="R. Pioli" initials="R." surname="Pioli"/>
-            <date year="2026" month="February"/>
-          </front>
-        </reference>
-      </section>
-    </section>
+    <section title="References"/>
   </middle>
 
   <back>
+    <references title="Normative References">
+      <reference anchor="RFC8615">
+        <front>
+          <title>Well-Known Uniform Resource Identifiers (URIs)</title>
+          <author fullname="M. Nottingham" initials="M." surname="Nottingham"/>
+          <date year="2019" month="May"/>
+        </front>
+      </reference>
+      <reference anchor="A2A">
+        <front>
+          <title>Agent-to-Agent Protocol</title>
+          <author fullname="Google LLC"/>
+          <date year="2025"/>
+        </front>
+      </reference>
+      <reference anchor="MCP">
+        <front>
+          <title>Model Context Protocol</title>
+          <author fullname="Anthropic"/>
+          <date year="2024" month="November"/>
+        </front>
+      </reference>
+    </references>
+
+    <references title="Informative References">
+      <reference anchor="PAGERANK">
+        <front>
+          <title>The PageRank Citation Ranking: Bringing Order to the Web</title>
+          <author fullname="L. Page" initials="L." surname="Page"/>
+          <author fullname="S. Brin" initials="S." surname="Brin"/>
+          <author fullname="R. Motwani" initials="R." surname="Motwani"/>
+          <author fullname="T. Winograd" initials="T." surname="Winograd"/>
+          <date year="1999"/>
+        </front>
+      </reference>
+      <reference anchor="ARDP">
+        <front>
+          <title>Agent Registration and Discovery Protocol (ARDP)</title>
+          <author fullname="R. Pioli" initials="R." surname="Pioli"/>
+          <date year="2026" month="February"/>
+        </front>
+      </reference>
+    </references>
+
     <section title="Acknowledgements">
       <t>
         The design of AQG is inspired by the PageRank algorithm (Page et al., 1999)
