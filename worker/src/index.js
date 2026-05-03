@@ -3,6 +3,8 @@
 // Phase 2: MCP Registry + Smithery + Glama + HuggingFace + Aiia.ro + Google A2A Discovery
 // Version: 0.2.0
 
+import { renderLandingPage } from './landing.js';
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -28,8 +30,15 @@ export default {
     }
     await env.AGENT_ROUTER_KV.put(rateKey, JSON.stringify({ count: (rateData?.count || 0) + 1, ts: rateData?.ts || now }), { expirationTtl: 3600 });
 
-    // Routes
+    // Routes — Serve landing page for browsers, JSON for API clients
+    const acceptHtml = (request.headers.get('Accept') || '').includes('text/html');
+
     if (url.pathname === '/' || url.pathname === '') {
+      if (acceptHtml) {
+        return new Response(renderLandingPage(), {
+          headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300' },
+        });
+      }
       return jsonResponse({
         name: 'Agent Router API',
         version: '0.2.0',
@@ -218,16 +227,20 @@ const REGISTRIES = [
       const data = await res.json();
       return data.servers || [];
     },
-    normalize: (s) => ({
-      name: s.server?.name || s.name || 'unknown',
-      description: s.server?.description || s.description || '',
-      version: s.server?.version || s.version || '',
-      protocols: ['mcp'],
-      repository: s.server?.repository?.url || s.repository?.url || null,
-      source: 'mcp-registry',
-      source_url: `https://registry.modelcontextprotocol.io/v0/servers/${s.server?.name || s.name}`,
-      agent_json_format: 'v1',
-    }),
+    normalize: (s) => {
+      const name = s.server?.name || s.name || 'unknown';
+      const repoUrl = s.server?.repository?.url || s.repository?.url || null;
+      return {
+        name,
+        description: s.server?.description || s.description || '',
+        version: s.server?.version || s.version || '',
+        protocols: ['mcp'],
+        repository: repoUrl,
+        source: 'mcp-registry',
+        source_url: repoUrl || `https://registry.modelcontextprotocol.io`,
+        agent_json_format: 'v1',
+      };
+    },
   },
   {
     id: 'smithery',
@@ -246,20 +259,26 @@ const REGISTRIES = [
       const data = await res.json();
       return data.servers || [];
     },
-    normalize: (s) => ({
-      name: s.qualifiedName || s.slug || 'unknown',
-      description: s.description || '',
-      version: '',
-      protocols: ['mcp'],
-      trust: {
-        verified: s.verified || false,
-        score: s.score || 0,
-        endorsements: s.useCount || 0,
-      },
-      source: 'smithery',
-      source_url: `https://smithery.ai/server/${s.qualifiedName || s.slug}`,
-      agent_json_format: 'v1',
-    }),
+    normalize: (s) => {
+      const qn = s.qualifiedName || s.slug || 'unknown';
+      const ns = s.namespace || s.owner || '';
+      const slug = s.slug || s.qualifiedName?.split('/').pop() || '';
+      const smitheryUrl = ns ? `https://smithery.ai/server/@${ns}/${slug}` : `https://smithery.ai/server/${qn}`;
+      return {
+        name: qn,
+        description: s.description || '',
+        version: '',
+        protocols: ['mcp'],
+        trust: {
+          verified: s.verified || false,
+          score: s.score || 0,
+          endorsements: s.useCount || 0,
+        },
+        source: 'smithery',
+        source_url: smitheryUrl,
+        agent_json_format: 'v1',
+      };
+    },
   },
   {
     id: 'glama',
@@ -278,16 +297,21 @@ const REGISTRIES = [
       const data = await res.json();
       return Array.isArray(data) ? data : (data.servers || []);
     },
-    normalize: (s) => ({
-      name: s.name || s.slug || 'unknown',
-      description: s.description || '',
-      version: s.version || '',
-      protocols: ['mcp'],
-      repository: s.repository?.url || null,
-      source: 'glama',
-      source_url: `https://glama.ai/mcp/servers/${s.namespace || 'unknown'}/${s.slug || s.name}`,
-      agent_json_format: 'v1',
-    }),
+    normalize: (s) => {
+      const name = s.name || s.slug || 'unknown';
+      const ns = s.namespace || s.owner || 'unknown';
+      const slug = s.slug || s.name || '';
+      return {
+        name,
+        description: s.description || '',
+        version: s.version || '',
+        protocols: ['mcp'],
+        repository: s.repository?.url || null,
+        source: 'glama',
+        source_url: `https://glama.ai/mcp/servers/${ns}/${slug}`,
+        agent_json_format: 'v1',
+      };
+    },
   },
   {
     id: 'huggingface',
