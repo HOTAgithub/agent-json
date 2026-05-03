@@ -1,4 +1,7 @@
 name = "agent-router"
 main = "src/index.js"
 compatibility_date = "2026-04-01"
-# KV binding will be added after creating namespace with proper token
+
+[[kv_namespaces]]
+binding = "AGENT_ROUTER_KV"
+id = "3f60fc39c5084fa78964f74cf901bdff"

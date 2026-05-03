@@ -46,6 +46,8 @@ export default {
     }
 
     if (url.pathname === '/stats') {
+      const cached = await env.AGENT_ROUTER_KV.get('stats', 'json');
+      if (cached) return jsonResponse(cached);
       return jsonResponse({ total_agents: 0, registries: 5, last_updated: null, note: 'Stats being populated' });
     }
 
@@ -122,8 +124,8 @@ export default {
         registries_searched: results.filter(r => r.status === 'fulfilled').length,
       };
 
-      // Cache for 1 hour (KV disabled - will add later)
-      // await env.AGENT_ROUTER_KV.put(cacheKey, JSON.stringify(response), { expirationTtl: 3600 });
+      // Cache for 1 hour
+      await env.AGENT_ROUTER_KV.put(cacheKey, JSON.stringify(response), { expirationTtl: 3600 });
 
       return jsonResponse(response);
     }
